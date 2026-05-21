@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>GLB Upload WebAR</title>
+
+<script src="./js/aframe.min.js"></script>
+<script src="./js/aframe-ar.js"></script>
+
+<style>
+html, body {
+  margin: 0;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+  font-family: sans-serif;
+}
+
+#ui {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 9999;
+  background: rgba(255,255,255,0.92);
+  padding: 10px;
+  border-radius: 10px;
+  max-width: 420px;
+}
+
+button {
+  margin: 2px;
+  padding: 6px 10px;
+  font-size: 13px;
+}
+
+#status {
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.note {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.a-enter-vr {
+  display: none !important;
+}
+</style>
+</head>
+
+<body>
+
+<div id="ui">
+
+  <input type="file" id="fileInput" accept=".glb">
+
+  <div id="status">
+    .glbを選択、Windows / Chromebook専用
+  </div>
+
+  <hr>
+
+  <div>
+    <button onclick="rotateY(-15)">左回転</button>
+    <button onclick="rotateY(15)">右回転</button>
+    <button onclick="resetModel()">リセット</button>
+  </div>
+
+  <hr>
+
+  <div>
+    <b>位置調整</b><br>
+
+    <button onclick="moveX(-0.1)">←</button>
+    <button onclick="moveX(0.1)">→</button>
+
+    <button onclick="moveY(0.1)">↑</button>
+    <button onclick="moveY(-0.1)">↓</button>
+
+    <button onclick="moveZ(0.1)">手前</button>
+    <button onclick="moveZ(-0.1)">奥</button>
+
+  </div>
+
+  <div class="note">
+    マーカーは1m四方で、プロジェクタやTVで垂直に提示<br>
+    作成：飯田和也（武蔵野大学）
+  </div>
+
+</div>
+
+<a-scene
+  embedded
+  vr-mode-ui="enabled: false"
+  xr-mode-ui="enabled: false"
+  device-orientation-permission-ui="enabled: false"
+  arjs="sourceType: webcam;">
+
+  <a-marker
+    type="pattern"
+    url="./marker/marker.patt"
+    size="1">
+
+    <!-- 姿勢補正用 -->
+    <a-entity rotation="-90 0 0">
+
+      <!-- ユーザー操作用 -->
+      <a-entity
+        id="model"
+        scale="1 1 1"
+        position="0 0 0"
+        rotation="0 0 0"
+        visible="false">
+      </a-entity>
+
+    </a-entity>
+
+  </a-marker>
+
+  <a-entity camera></a-entity>
+
+</a-scene>
+
+<script>
+
+const fileInput = document.getElementById("fileInput");
+const model = document.getElementById("model");
+const statusText = document.getElementById("status");
+
+let rotY = 0;
+
+let posX = 0;
+let posY = 0;
+let posZ = 0;
+
+let objectUrl = null;
+
+fileInput.addEventListener("change", function(e) {
+
+  const file = e.target.files[0];
+
+  if (!file) return;
+
+  if (objectUrl) {
+    URL.revokeObjectURL(objectUrl);
+  }
+
+  objectUrl = URL.createObjectURL(file);
+
+  statusText.innerHTML =
+    "読み込み中：" + file.name;
+
+  model.removeAttribute("gltf-model");
+
+  resetModel();
+
+  setTimeout(function() {
+
+    model.setAttribute("gltf-model", objectUrl);
+
+  }, 100);
+
+});
+
+model.addEventListener("model-loaded", function() {
+
+  model.setAttribute("visible", "true");
+
+  statusText.innerHTML =
+    "読み込み完了：" +
+    " " + fileInput.files[0].name;
+
+});
+
+model.addEventListener("model-error", function(e) {
+
+  console.error(e);
+
+  statusText.innerHTML =
+    "モデル読み込み失敗";
+
+});
+
+function updateRotation() {
+
+  model.setAttribute(
+    "rotation",
+    "0 " + rotY + " 0"
+  );
+
+}
+
+function updatePosition() {
+
+  model.setAttribute(
+    "position",
+    posX + " " + posY + " " + posZ
+  );
+
+}
+
+function rotateY(v) {
+
+  rotY += v;
+  updateRotation();
+
+}
+
+function moveX(v) {
+
+  posX += v;
+  updatePosition();
+
+}
+
+function moveY(v) {
+
+  posY += v;
+  updatePosition();
+
+}
+
+function moveZ(v) {
+
+  posZ += v;
+  updatePosition();
+
+}
+
+function resetModel() {
+
+  rotY = 0;
+
+  posX = 0;
+  posY = 0;
+  posZ = 0;
+
+  model.setAttribute("scale", "1 1 1");
+
+  updateRotation();
+  updatePosition();
+
+}
+
+</script>
+
+</body>
+</html>
